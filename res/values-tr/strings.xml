@@ -37,7 +37,7 @@
   <string name="pref_long_interval_title">Tuşların tekrarlama sıklığı</string>
   <string name="pref_lock_double_tap_title">CapsLock için Shift tuşuna çift bas</string>
   <string name="pref_lock_double_tap_summary">Uzun basarak CapsLock açılabilir</string>
-  <string name="pref_category_behavior">Klavye davranışı</string>
+  <string name="pref_category_behavior">Klavye davranışları</string>
   <string name="pref_autocapitalisation_title">Otomatik büyük harf</string>
   <string name="pref_autocapitalisation_summary">Noktadan sonra ve her cümlenin başında büyük harf yapar</string>
   <string name="pref_switch_input_immediate_title">Son kullanılan klavyeye geç</string>

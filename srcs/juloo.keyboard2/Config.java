@@ -3,7 +3,6 @@ package juloo.keyboard2;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.content.res.Resources;
-import android.os.Build;
 import android.util.DisplayMetrics;
 import android.util.TypedValue;
 import android.view.KeyEvent;
@@ -29,13 +28,17 @@ public final class Config
   public final float labelTextSize;
   public final float sublabelTextSize;
 
+  public final KeyboardData.Row bottom_row;
+  public final KeyboardData.Row number_row;
+  public final KeyboardData num_pad;
+
   // From preferences
   /** [null] represent the [system] layout. */
   public List<KeyboardData> layouts;
   public boolean show_numpad = false;
   // From the 'numpad_layout' option, also apply to the numeric pane.
   public boolean inverse_numpad = false;
-  public boolean number_row;
+  public boolean add_number_row;
   public float swipe_dist_px;
   public float slide_step_px;
   // Let the system handle vibration when false.
@@ -51,6 +54,8 @@ public final class Config
   public float key_horizontal_margin;
   public int labelBrightness; // 0 - 255
   public int keyboardOpacity; // 0 - 255
+  public float customBorderRadius; // 0 - 1
+  public float customBorderLineWidth; // dp
   public int keyOpacity; // 0 - 255
   public int keyActivatedOpacity; // 0 - 255
   public boolean double_tap_lock_shift;
@@ -59,6 +64,8 @@ public final class Config
   public boolean autocapitalisation;
   public boolean switch_input_immediate;
   public boolean pin_entry_enabled;
+  public boolean borderConfig;
+  public int circle_sensitivity;
 
   // Dynamically set
   public boolean shouldOfferVoiceTyping;
@@ -84,6 +91,16 @@ public final class Config
     keyPadding = res.getDimension(R.dimen.key_padding);
     labelTextSize = 0.33f;
     sublabelTextSize = 0.22f;
+    try
+    {
+      number_row = KeyboardData.load_number_row(res);
+      bottom_row = KeyboardData.load_bottom_row(res);
+      num_pad = KeyboardData.load_num_pad(res);
+    }
+    catch (Exception e)
+    {
+      throw new RuntimeException(e.getMessage()); // Not recoverable
+    }
     // from prefs
     refresh(res);
     // initialized later
@@ -121,7 +138,7 @@ public final class Config
     }
     layouts = LayoutsPreference.load_from_preferences(res, _prefs);
     inverse_numpad = _prefs.getString("numpad_layout", "default").equals("low_first");
-    number_row = _prefs.getBoolean("number_row", false);
+    add_number_row = _prefs.getBoolean("number_row", false);
     // The baseline for the swipe distance correspond to approximately the
     // width of a key in portrait mode, as most layouts have 10 columns.
     // Multipled by the DPI ratio because most swipes are made in the diagonals.
@@ -130,7 +147,7 @@ public final class Config
     float swipe_scaling = Math.min(dm.widthPixels, dm.heightPixels) / 10.f * dpi_ratio;
     float swipe_dist_value = Float.valueOf(_prefs.getString("swipe_dist", "15"));
     swipe_dist_px = swipe_dist_value / 25.f * swipe_scaling;
-    slide_step_px = swipe_dist_px / 4.f;
+    slide_step_px = 0.2f * swipe_scaling;
     vibrate_custom = _prefs.getBoolean("vibrate_custom", false);
     vibrate_duration = _prefs.getInt("vibrate_duration", 20);
     longPressTimeout = _prefs.getInt("longpress_timeout", 600);
@@ -144,6 +161,10 @@ public final class Config
     keyboardOpacity = _prefs.getInt("keyboard_opacity", 100) * 255 / 100;
     keyOpacity = _prefs.getInt("key_opacity", 100) * 255 / 100;
     keyActivatedOpacity = _prefs.getInt("key_activated_opacity", 100) * 255 / 100;
+    // keyboard border settings
+    borderConfig = _prefs.getBoolean("border_config", false);
+    customBorderRadius = _prefs.getInt("custom_border_radius", 0) / 100.f;
+    customBorderLineWidth = get_dip_pref(dm, "custom_border_line_width", 0);
     // Do not substract key_vertical_margin from keyHeight because this is done
     // during rendering.
     keyHeight = dm.heightPixels * keyboardHeightPercent / 100 / 4;
@@ -161,6 +182,7 @@ public final class Config
     pin_entry_enabled = _prefs.getBoolean("pin_entry_enabled", true);
     current_layout_portrait = _prefs.getInt("current_layout_portrait", 0);
     current_layout_landscape = _prefs.getInt("current_layout_landscape", 0);
+    circle_sensitivity = Integer.valueOf(_prefs.getString("circle_sensitivity", "2"));
   }
 
   public int get_current_layout()
@@ -203,6 +225,9 @@ public final class Config
     // first iteration then automatically added.
     final Map<KeyValue, KeyboardData.PreferredPos> extra_keys = new HashMap<KeyValue, KeyboardData.PreferredPos>();
     final Set<KeyValue> remove_keys = new HashSet<KeyValue>();
+    // Make sure the config key is accessible to avoid being locked in a custom
+    // layout.
+    extra_keys.put(KeyValue.getKeyByName("config"), KeyboardData.PreferredPos.ANYWHERE);
     extra_keys.putAll(extra_keys_param);
     extra_keys.putAll(extra_keys_custom);
     if (extra_keys_subtype != null)
@@ -214,9 +239,13 @@ public final class Config
       extra_keys_subtype.compute(extra_keys,
           new ExtraKeys.Query(kw.script, present));
     }
-    boolean number_row = this.number_row && !show_numpad;
-    if (number_row)
-      remove_keys.addAll(KeyboardData.number_row.getKeys(0).keySet());
+    KeyboardData.Row added_number_row = null;
+    if (add_number_row && !show_numpad)
+      added_number_row = modify_number_row(number_row, kw);
+    if (added_number_row != null)
+      remove_keys.addAll(added_number_row.getKeys(0).keySet());
+    if (kw.bottom_row)
+      kw = kw.insert_row(bottom_row, kw.rows.size());
     kw = kw.mapKeys(new KeyboardData.MapKeyValues() {
       public KeyValue apply(KeyValue key, boolean localized)
       {
@@ -268,9 +297,9 @@ public final class Config
       }
     });
     if (show_numpad)
-      kw = kw.addNumPad(modify_numpad(KeyboardData.num_pad, kw));
-    if (number_row)
-      kw = kw.addNumberRow();
+      kw = kw.addNumPad(modify_numpad(num_pad, kw));
+    if (added_number_row != null)
+      kw = kw.insert_row(added_number_row, 0);
     if (extra_keys.size() > 0)
       kw = kw.addExtraKeys(extra_keys.entrySet().iterator());
     return kw;
@@ -309,7 +338,7 @@ public final class Config
               c = inverse_numpad_char(c);
             String modified = map_digit.apply(c);
             if (modified != null) // Was modified by script
-              return key.withSymbol(modified);
+              return KeyValue.makeStringKey(modified);
             if (prev_c != c) // Was inverted
               return key.withChar(c);
             break;
@@ -317,6 +346,39 @@ public final class Config
         return key;
       }
     });
+  }
+
+  static KeyboardData.MapKeyValues numpad_script_map(String numpad_script)
+  {
+    final KeyModifier.Map_char map_digit = KeyModifier.modify_numpad_script(numpad_script);
+    return new KeyboardData.MapKeyValues() {
+      public KeyValue apply(KeyValue key, boolean localized)
+      {
+        switch (key.getKind())
+        {
+          case Char:
+            String modified = map_digit.apply(key.getChar());
+            if (modified != null)
+              return KeyValue.makeStringKey(modified);
+            break;
+        }
+        return key;
+      }
+    };
+  }
+
+  /** Modify the pin entry layout. [main_kw] is used to map the digits into the
+      same script. */
+  public KeyboardData modify_pinentry(KeyboardData kw, KeyboardData main_kw)
+  {
+    return kw.mapKeys(numpad_script_map(main_kw.numpad_script));
+  }
+
+  /** Modify the number row according to [main_kw]'s script. */
+  public KeyboardData.Row modify_number_row(KeyboardData.Row row,
+      KeyboardData main_kw)
+  {
+    return row.mapKeys(numpad_script_map(main_kw.numpad_script));
   }
 
   private float get_dip_pref(DisplayMetrics dm, String pref_name, float def)
@@ -351,12 +413,9 @@ public final class Config
       case "jungle": return R.style.Jungle;
       default:
       case "system":
-        if (Build.VERSION.SDK_INT >= 8)
-        {
-          int night_mode = res.getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
-          if ((night_mode & Configuration.UI_MODE_NIGHT_NO) != 0)
-            return R.style.Light;
-        }
+        int night_mode = res.getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
+        if ((night_mode & Configuration.UI_MODE_NIGHT_NO) != 0)
+          return R.style.Light;
         return R.style.Dark;
     }
   }
@@ -432,7 +491,7 @@ public final class Config
       case 1:
       default: break;
     }
-    e.commit();
+    e.apply();
   }
 
   private static LayoutsPreference.Layout migrate_layout(String name)

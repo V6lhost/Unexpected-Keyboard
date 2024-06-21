@@ -14,7 +14,7 @@ Python 3 is required to update generated files but not to build the app.
 For Android Studio users, no more setup is needed.
 
 For Nix users, the right environment can be obtained with `nix-shell ./shell.nix`.
-Instructions to install Nix are [here](https://nixos.wiki/wiki/Nix_Installation_Guide).
+Instructions to install Nix are [here](https://wiki.nixos.org/wiki/Nix_Installation_Guide).
 
 If you don't use Android Studio or Nix, you have to inform Gradle about the
 location of your Android SDK by either:
@@ -110,6 +110,10 @@ Run `./gradlew checkKeyboardLayouts` to check some properties about your
 layout. This will change the file `check_layout.output`, which you should
 commit.
 
+Layouts are CC0 licensed by default. If you do not want your layout to be
+released into the public domain, add a copyright notice at the top of the file
+and a mention in `srcs/layouts/LICENSE`.
+
 #### Adding a programming layout
 
 A programming layout must contain all ASCII characters.
@@ -176,7 +180,7 @@ the file and the English strings.
 To check that `strings.xml` is formatted correctly, run
 `python sync_translations.py`. This will modify your files.
 
-Store descriptions in `metedata/` are updated automatically.
+Store descriptions in `fastlane/metadata/android/` are updated automatically.
 Translating changelogs is not useful.
 
 The app name might be partially translated, the "Unexpected" word should remain

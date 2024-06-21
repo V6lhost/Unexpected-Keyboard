@@ -35,8 +35,6 @@ Bu uygulama açık kaynaklıdır. Reklam içermez ve internete bağlanmaz."</str
   <string name="pref_extra_keys_title">Tuş ekle</string>
   <string name="pref_extra_keys_custom">Özel tuş ekle</string>
   <string name="pref_extra_keys_internal">Klavyeye eklenecek tuşları seçin</string>
-  <string name="pref_second_layout_title">İklncil tuş düzeni</string>
-  <string name="pref_second_layout_none">Hiçbiri</string>
   <string name="pref_category_typing">Yazma</string>
   <string name="pref_swipe_dist_title">Kaydırma mesafesi</string>
   <string name="pref_swipe_dist_summary">Tuşların köşelerinden kaydırma mesafesi (%s)</string>
@@ -49,8 +47,8 @@ Bu uygulama açık kaynaklıdır. Reklam içermez ve internete bağlanmaz."</str
   <string name="pref_autocapitalisation_summary">Noktadan sonra ve her cümlenin başında büyük harf yapar</string>
   <string name="pref_switch_input_immediate_title">Son kullanılan klavyeye geç</string>
   <string name="pref_switch_input_immediate_summary">Klavye değistirme tuşunun davranışını belirler</string>
-  <!-- <string name="pref_vibrate_custom">Custom vibration</string> -->
-  <!-- <string name="pref_vibrate_duration_title">Vibration intensity</string> -->
+  <string name="pref_vibrate_custom">Özel titreşim</string>
+  <string name="pref_vibrate_duration_title">Titreşim yoğunluğu</string>
   <string name="pref_pin_entry_enabled_title">NumPad</string>
   <string name="pref_pin_entry_enabled_summary">Sayıları, tarihleri ve telefon numaralarını yazarken</string>
   <string name="pref_category_style">Tarz</string>
@@ -76,6 +74,14 @@ Bu uygulama açık kaynaklıdır. Reklam içermez ve internete bağlanmaz."</str
   <string name="pref_swipe_dist_e_very_far">Çok uzun</string>
   <string name="pref_key_horizontal_space">Tuşlar arasındaki yatay boşluk</string>
   <string name="pref_key_vertical_space">Tuşlar arasındaki dikey boşluk</string>
+  <!-- <string name="pref_border_config_title">Customize borders</string> -->
+  <!-- <string name="pref_border_width_title">Border Width</string> -->
+  <!-- <string name="pref_corners_radius_title">Corner radius</string> -->
+  <!-- <string name="pref_circle_sensitivity_title">Circle gesture sensitivity</string> -->
+  <!-- <string name="pref_circle_sensitivity_e_high">High</string> -->
+  <!-- <string name="pref_circle_sensitivity_e_medium">Medium</string> -->
+  <!-- <string name="pref_circle_sensitivity_e_low">Low</string> -->
+  <!-- <string name="pref_circle_sensitivity_e_disabled">Disabled</string> -->
   <string name="key_action_next">Sonraki</string>
   <string name="key_action_done">Tamam</string>
   <string name="key_action_go">ileri</string>
@@ -87,9 +93,11 @@ Bu uygulama açık kaynaklıdır. Reklam içermez ve internete bağlanmaz."</str
   <string name="launcher_description">Bu uygulama bir sanal klavye uygulamasıdır. Aşağıdaki butona basarak sistem ayarlarında etkinleştiriniz.</string>
   <string name="launcher_sourcecode">Bu uygulama ücretsiz ve açık kaynaklıdır. Kaynak koduna erişmek veya bir hata raporlamak için GitHub</string>
   <string name="launcher_tryhere">Ayarlardan aktif ettikten sonra klavyeyi burada test edebilirsin:</string>
+  <!-- <string name="launcher_tryhere_hint">Try here</string> -->
   <string name="key_descr_capslock">CapsLock</string>
+  <!-- <string name="key_descr_compose">Compose</string> -->
   <string name="key_descr_switch_greekmath">Greek &amp; math sembolleri</string>
-  <!-- <string name="key_descr_change_method">Switch keyboard</string> -->
+  <string name="key_descr_change_method">Klavye değiştir</string>
   <string name="key_descr_voice_typing">Sesle yazma</string>
   <string name="key_descr_copy">Kopyala</string>
   <string name="key_descr_paste">Yapıştır</string>
@@ -107,5 +115,4 @@ Bu uygulama açık kaynaklıdır. Reklam içermez ve internete bağlanmaz."</str
   <string name="key_descr_page_down">Aşağı</string>
   <string name="key_descr_home">BAŞ(Sol yön tuşu)</string>
   <string name="key_descr_end">SON(Sağ yön tuşu)</string>
-  <string name="pref_category_advanced">Gelişmiş</string>
 </resources>

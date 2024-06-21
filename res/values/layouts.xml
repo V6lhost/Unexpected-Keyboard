@@ -22,6 +22,7 @@
     <item>deva_alt</item>
     <item>deva_inscript</item>
     <item>grek_qwerty</item>
+    <item>guj_phonetic_in</item>
     <item>hang_dubeolsik_kr</item>
     <item>hebr_1_il</item>
     <item>hebr_2_il</item>
@@ -31,13 +32,16 @@
     <item>latn_neo2</item>
     <item>latn_qwerty_br</item>
     <item>latn_qwerty_cz</item>
+    <item>latn_qwerty_da</item>
     <item>latn_qwerty_es</item>
+    <item>latn_qwerty_gb</item>
     <item>latn_qwerty_hu</item>
     <item>latn_qwerty_lv</item>
     <item>latn_qwerty_no</item>
     <item>latn_qwerty_pl</item>
     <item>latn_qwerty_ro</item>
     <item>latn_qwerty_se</item>
+    <item>latn_qwerty_sk</item>
     <item>latn_qwerty_tly</item>
     <item>latn_qwerty_tr</item>
     <item>latn_qwerty_vi</item>
@@ -48,6 +52,7 @@
     <item>latn_qwertz_fr_ch</item>
     <item>latn_qwertz_hu</item>
     <item>latn_qwertz_sk</item>
+    <item>shaw_imperial_en</item>
     <item>urdu_phonetic_ur</item>
     <item>custom</item>
   </string-array>
@@ -72,6 +77,7 @@
     <item>देवनागरी (हिंदी)-2</item>
     <item>देवनागरी (हिंदी)-1</item>
     <item>QWERTY (Greek)</item>
+    <item>ગુજરાતી ફોનેટિક - Gujarati Phonetic</item>
     <item>두벌식 (Korean)</item>
     <item>Hebrew 1</item>
     <item>Hebrew 2</item>
@@ -81,13 +87,16 @@
     <item>Neo 2</item>
     <item>QWERTY (Brasileiro)</item>
     <item>QWERTY (Czech)</item>
+    <item>QWERTY (Danish)</item>
     <item>QWERTY (Español)</item>
+    <item>QWERTY (UK)</item>
     <item>QWERTY (Magyar)</item>
     <item>QWERTY (Latvian)</item>
     <item>QWERTY (Norwegian)</item>
     <item>QWERTY (Polski)</item>
     <item>QWERTY (Română)</item>
     <item>QWERTY (Swedish)</item>
+    <item>QWERTY (Slovak)</item>
     <item>QWERTY (Talysh New Latin)</item>
     <item>QWERTY (Türkçe)</item>
     <item>QWERTY (Vietnamese)</item>
@@ -98,6 +107,7 @@
     <item>QWERTZ (Swiss French)</item>
     <item>QWERTZ (Magyar)</item>
     <item>QWERTZ (Slovak)</item>
+    <item>Shaw Imperial</item>
     <item>Urdu Phonetic</item>
     <item>@string/pref_layout_e_custom</item>
   </string-array>
@@ -122,6 +132,7 @@
     <item>@xml/deva_alt</item>
     <item>@xml/deva_inscript</item>
     <item>@xml/grek_qwerty</item>
+    <item>@xml/guj_phonetic_in</item>
     <item>@xml/hang_dubeolsik_kr</item>
     <item>@xml/hebr_1_il</item>
     <item>@xml/hebr_2_il</item>
@@ -131,13 +142,16 @@
     <item>@xml/latn_neo2</item>
     <item>@xml/latn_qwerty_br</item>
     <item>@xml/latn_qwerty_cz</item>
+    <item>@xml/latn_qwerty_da</item>
     <item>@xml/latn_qwerty_es</item>
+    <item>@xml/latn_qwerty_gb</item>
     <item>@xml/latn_qwerty_hu</item>
     <item>@xml/latn_qwerty_lv</item>
     <item>@xml/latn_qwerty_no</item>
     <item>@xml/latn_qwerty_pl</item>
     <item>@xml/latn_qwerty_ro</item>
     <item>@xml/latn_qwerty_se</item>
+    <item>@xml/latn_qwerty_sk</item>
     <item>@xml/latn_qwerty_tly</item>
     <item>@xml/latn_qwerty_tr</item>
     <item>@xml/latn_qwerty_vi</item>
@@ -148,6 +162,7 @@
     <item>@xml/latn_qwertz_fr_ch</item>
     <item>@xml/latn_qwertz_hu</item>
     <item>@xml/latn_qwertz_sk</item>
+    <item>@xml/shaw_imperial_en</item>
     <item>@xml/urdu_phonetic_ur</item>
     <item>-1</item>
   </integer-array>

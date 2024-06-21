@@ -1,5 +1,6 @@
 package juloo.keyboard2;
 
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.Intent;
 import android.media.AudioManager;
@@ -9,6 +10,8 @@ import android.os.Build.VERSION;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.view.KeyEvent;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
@@ -25,16 +28,34 @@ public class LauncherActivity extends Activity
   @Override
   public void onCreate(Bundle savedInstanceState)
   {
-    
     super.onCreate(savedInstanceState);
     setContentView(R.layout.launcher_activity);
     _intro_video = (VideoView)findViewById(R.id.launcher_intro_video);
     _tryhere_text = (TextView)findViewById(R.id.launcher_tryhere_text);
     _tryhere_area = (EditText)findViewById(R.id.launcher_tryhere_area);
-    if (VERSION.SDK_INT > 28)
+    if (VERSION.SDK_INT >= 28)
       _tryhere_area.addOnUnhandledKeyEventListener(
           this.new Tryhere_OnUnhandledKeyEventListener());
     setup_intro_video(_intro_video);
+  }
+
+  @Override
+  public final boolean onCreateOptionsMenu(Menu menu)
+  {
+    getMenuInflater().inflate(R.menu.launcher_menu, menu);
+    return true;
+  }
+
+  @Override
+  public final boolean onOptionsItemSelected(MenuItem item)
+  {
+    if (item.getItemId() == R.id.btnLaunchSettingsActivity)
+    {
+      Intent intent = new Intent(LauncherActivity.this, SettingsActivity.class);
+      intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+      startActivity(intent);
+    }
+    return super.onOptionsItemSelected(item);
   }
 
   public void launch_imesettings(View _btn)
@@ -76,6 +97,7 @@ public class LauncherActivity extends Activity
     v.start();
   }
 
+  @TargetApi(28)
   final class Tryhere_OnUnhandledKeyEventListener implements View.OnUnhandledKeyEventListener
   {
     public boolean onUnhandledKeyEvent(View v, KeyEvent ev)
@@ -95,7 +117,7 @@ public class LauncherActivity extends Activity
       String kc = KeyEvent.keyCodeToString(ev.getKeyCode());
       s.append(kc.replaceFirst("^KEYCODE_", ""));
       _tryhere_text.setText(s.toString());
-      return true;
+      return false;
     }
   }
 }

@@ -1,5 +1,6 @@
 package juloo.keyboard2;
 
+import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -87,10 +88,16 @@ public class Keyboard2 extends InputMethodService
     return KeyboardData.load(getResources(), layout_id);
   }
 
-  /** Load a layout that contains a numpad (eg. the pin entry). */
+  /** Load a layout that contains a numpad. */
   KeyboardData loadNumpad(int layout_id)
   {
     return _config.modify_numpad(KeyboardData.load(getResources(), layout_id),
+        current_layout_unmodified());
+  }
+
+  KeyboardData loadPinentry(int layout_id)
+  {
+    return _config.modify_pinentry(KeyboardData.load(getResources(), layout_id),
         current_layout_unmodified());
   }
 
@@ -98,7 +105,6 @@ public class Keyboard2 extends InputMethodService
   public void onCreate()
   {
     super.onCreate();
-    KeyboardData.init(getResources());
     SharedPreferences prefs = DirectBootAwarePreferences.get_shared_preferences(this);
     _keyeventhandler = new KeyEventHandler(getMainLooper(), this.new Receiver());
     Config.initGlobalConfig(prefs, getResources(), _keyeventhandler);
@@ -118,6 +124,7 @@ public class Keyboard2 extends InputMethodService
     return Arrays.asList();
   }
 
+  @TargetApi(12)
   private ExtraKeys extra_keys_of_subtype(InputMethodSubtype subtype)
   {
     String extra_keys = subtype.getExtraValueOf("extra_keys");
@@ -127,6 +134,7 @@ public class Keyboard2 extends InputMethodService
     return ExtraKeys.EMPTY;
   }
 
+  @TargetApi(12)
   private void refreshAccentsOption(InputMethodManager imm, InputMethodSubtype subtype)
   {
     List<InputMethodSubtype> enabled_subtypes = getEnabledSubtypes(imm);
@@ -215,6 +223,7 @@ public class Keyboard2 extends InputMethodService
     {
       _keyboardView = (Keyboard2View)inflate_view(R.layout.keyboard);
       _emojiPane = null;
+      setInputView(_keyboardView);
     }
     _keyboardView.reset();
   }
@@ -227,7 +236,7 @@ public class Keyboard2 extends InputMethodService
       case InputType.TYPE_CLASS_PHONE:
       case InputType.TYPE_CLASS_DATETIME:
         if (_config.pin_entry_enabled)
-          return loadNumpad(R.xml.pin);
+          return loadPinentry(R.xml.pin);
         else
           return loadNumpad(R.xml.numeric);
       default:
@@ -337,7 +346,6 @@ public class Keyboard2 extends InputMethodService
   public void onSharedPreferenceChanged(SharedPreferences _prefs, String _key)
   {
     refresh_config();
-    setInputView(_keyboardView);
     _keyboardView.setKeyboard(current_layout());
   }
 
@@ -429,6 +437,11 @@ public class Keyboard2 extends InputMethodService
     public void set_shift_state(boolean state, boolean lock)
     {
       _keyboardView.set_shift_state(state, lock);
+    }
+
+    public void set_compose_pending(boolean pending)
+    {
+      _keyboardView.set_compose_pending(pending);
     }
 
     public InputConnection getCurrentInputConnection()

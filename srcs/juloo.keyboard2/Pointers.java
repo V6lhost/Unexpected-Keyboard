@@ -13,6 +13,17 @@ import java.util.NoSuchElementException;
  */
 public final class Pointers implements Handler.Callback
 {
+  public static final int FLAG_P_LATCHABLE = 1;
+  public static final int FLAG_P_LATCHED = (1 << 1);
+  public static final int FLAG_P_FAKE = (1 << 2);
+  public static final int FLAG_P_LOCKABLE = (1 << 3);
+  public static final int FLAG_P_LOCKED = (1 << 4);
+  public static final int FLAG_P_SLIDING = (1 << 5);
+  /** Clear latched (only if also FLAG_P_LATCHABLE set). */
+  public static final int FLAG_P_CLEAR_LATCHED = (1 << 6);
+  /** Can't be locked, even when long pressing. */
+  public static final int FLAG_P_CANT_LOCK = (1 << 7);
+
   private Handler _keyrepeat_handler;
   private ArrayList<Pointer> _ptrs = new ArrayList<Pointer>();
   private IPointerEventHandler _handler;
@@ -35,15 +46,15 @@ public final class Pointers implements Handler.Callback
   private Modifiers getModifiers(boolean skip_latched)
   {
     int n_ptrs = _ptrs.size();
-    KeyValue.Modifier[] mods = new KeyValue.Modifier[n_ptrs];
+    KeyValue[] mods = new KeyValue[n_ptrs];
     int n_mods = 0;
     for (int i = 0; i < n_ptrs; i++)
     {
       Pointer p = _ptrs.get(i);
-      if (p.value != null && p.value.getKind() == KeyValue.Kind.Modifier
-          && !(skip_latched && p.pointerId == -1
-            && (p.flags & KeyValue.FLAG_LOCKED) == 0))
-        mods[n_mods++] = p.value.getModifier();
+      if (p.value != null
+          && !(skip_latched && p.hasFlagsAny(FLAG_P_LATCHED)
+            && (p.flags & FLAG_P_LOCKED) == 0))
+        mods[n_mods++] = p.value;
     }
     return Modifiers.ofArray(mods, n_mods);
   }
@@ -63,13 +74,7 @@ public final class Pointers implements Handler.Callback
     return false;
   }
 
-  /**
-   * These flags can be different:
-   *  FLAG_LOCK   Removed when the key is locked
-   *  FLAG_LOCKED Added when the key is locked
-   *  FLAG_LATCH  Removed when the key is latched (released but not consumed yet)
-   * Returns [-1] if not found.
-   */
+  /** See [FLAG_P_*] flags. Returns [-1] if the key is not pressed. */
   public int getKeyFlags(KeyValue kv)
   {
     for (Pointer p : _ptrs)
@@ -78,34 +83,50 @@ public final class Pointers implements Handler.Callback
     return -1;
   }
 
-  public int getKeyFlags(KeyboardData.Key key, KeyValue kv)
+  /** The key must not be already latched . */
+  void add_fake_pointer(KeyboardData.Key key, KeyValue kv, boolean locked)
   {
-    Pointer ptr = getLatched(key, kv);
-    if (ptr == null) return -1;
-    return ptr.flags;
-  }
-
-  /** Fake pointers are latched and not lockable. */
-  public void add_fake_pointer(KeyValue kv, KeyboardData.Key key, boolean locked)
-  {
-    Pointer ptr = getLatched(key, kv);
-    if (ptr != null)
-      removePtr(ptr); // Already latched, replace pointer.
-    ptr = new Pointer(-1, key, kv, 0.f, 0.f, Modifiers.EMPTY);
-    ptr.flags &= ~(KeyValue.FLAG_LATCH | KeyValue.FLAG_LOCK);
-    ptr.flags |= KeyValue.FLAG_FAKE_PTR;
+    Pointer ptr = new Pointer(-1, key, kv, 0.f, 0.f, Modifiers.EMPTY);
+    ptr.flags = FLAG_P_FAKE | FLAG_P_LATCHED;
     if (locked)
-      ptr.flags |= KeyValue.FLAG_LOCKED;
+      ptr.flags |= FLAG_P_LOCKED;
     _ptrs.add(ptr);
     _handler.onPointerFlagsChanged(false);
   }
 
-  public void remove_fake_pointer(KeyValue kv, KeyboardData.Key key)
+  /** Set whether a key is latched or locked by adding a "fake" pointer, a
+      pointer that is not due to user interaction.
+      This is used by auto-capitalisation.
+
+      When [lock] is true, [latched] control whether the modifier is locked or disabled.
+      When [lock] is false, an existing locked pointer is not affected. */
+  public void set_fake_pointer_state(KeyboardData.Key key, KeyValue kv,
+      boolean latched, boolean lock)
   {
     Pointer ptr = getLatched(key, kv);
-    if (ptr != null && (ptr.flags & KeyValue.FLAG_FAKE_PTR) != 0)
+    if (ptr == null)
+    {
+      // No existing pointer, latch the key.
+      if (latched)
+        add_fake_pointer(key, kv, lock);
+    }
+    else if ((ptr.flags & FLAG_P_FAKE) != 0)
+    {} // Key already latched but not by a fake ptr, do nothing.
+    else if (lock)
+    {
+      // Acting on locked modifiers, replace the pointer each time.
       removePtr(ptr);
-    _handler.onPointerFlagsChanged(false);
+      if (latched)
+        add_fake_pointer(key, kv, lock);
+    }
+    else if ((ptr.flags & FLAG_P_LOCKED) != 0)
+    {} // Existing ptr is locked but [lock] is false, do not continue.
+    else if (!latched)
+    {
+      // Key is latched by a fake ptr. Unlatch if requested.
+      removePtr(ptr);
+      _handler.onPointerFlagsChanged(false);
+    }
   }
 
   // Receiving events
@@ -115,36 +136,45 @@ public final class Pointers implements Handler.Callback
     Pointer ptr = getPtr(pointerId);
     if (ptr == null)
       return;
-    if (ptr.sliding)
+    if (ptr.hasFlagsAny(FLAG_P_SLIDING))
     {
       clearLatched();
-      onTouchUp_sliding(ptr);
+      ptr.sliding.onTouchUp(ptr);
       return;
     }
     stopKeyRepeat(ptr);
+    KeyValue ptr_value = ptr.value;
+    if (ptr.gesture != null && ptr.gesture.is_in_progress())
+    {
+      // A gesture was in progress
+      ptr.gesture.pointer_up();
+    }
     Pointer latched = getLatched(ptr);
     if (latched != null) // Already latched
     {
       removePtr(ptr); // Remove dupplicate
-      if ((latched.flags & KeyValue.FLAG_LOCK) != 0) // Toggle lockable key
+      if ((latched.flags & FLAG_P_LOCKABLE) != 0) // Toggle lockable key
         lockPointer(latched, false);
       else // Otherwise, unlatch
       {
         removePtr(latched);
-        _handler.onPointerUp(ptr.value, ptr.modifiers);
+        _handler.onPointerUp(ptr_value, ptr.modifiers);
       }
     }
-    else if ((ptr.flags & KeyValue.FLAG_LATCH) != 0)
+    else if ((ptr.flags & FLAG_P_LATCHABLE) != 0)
     {
-      ptr.flags &= ~KeyValue.FLAG_LATCH;
-      ptr.pointerId = -1; // Latch
+      // Latchable but non-special keys must clear latched.
+      if ((ptr.flags & FLAG_P_CLEAR_LATCHED) != 0)
+        clearLatched();
+      ptr.flags |= FLAG_P_LATCHED;
+      ptr.pointerId = -1;
       _handler.onPointerFlagsChanged(false);
     }
     else
     {
       clearLatched();
       removePtr(ptr);
-      _handler.onPointerUp(ptr.value, ptr.modifiers);
+      _handler.onPointerUp(ptr_value, ptr.modifiers);
     }
   }
 
@@ -158,7 +188,8 @@ public final class Pointers implements Handler.Callback
   private boolean isOtherPointerDown()
   {
     for (Pointer p : _ptrs)
-      if (p.pointerId != -1 && (p.flags & KeyValue.FLAG_SPECIAL) == 0)
+      if (!p.hasFlagsAny(FLAG_P_LATCHED) &&
+          (p.value == null || !p.value.hasFlagsAny(KeyValue.FLAG_SPECIAL)))
         return true;
     return false;
   }
@@ -192,18 +223,15 @@ public final class Pointers implements Handler.Callback
     return k.keys[DIRECTION_TO_INDEX[direction]];
   }
 
-  /*
-   * Get the KeyValue at the given direction. In case of swipe (direction !=
-   * null), get the nearest KeyValue that is not key0.
-   * Take care of applying [_handler.onPointerSwipe] to the selected key, this
-   * must be done at the same time to be sure to treat removed keys correctly.
-   * Return [null] if no key could be found in the given direction or if the
-   * selected key didn't change.
+  /**
+   * Get the key nearest to [direction] that is not key0. Take care
+   * of applying [_handler.modifyKey] to the selected key in the same
+   * operation to be sure to treat removed keys correctly.
+   * Return [null] if no key could be found in the given direction or
+   * if the selected key didn't change.
    */
-  private KeyValue getNearestKeyAtDirection(Pointer ptr, Integer direction)
+  private KeyValue getNearestKeyAtDirection(Pointer ptr, int direction)
   {
-    if (direction == null)
-      return _handler.modifyKey(ptr.key.keys[0], ptr.modifiers);
     KeyValue k;
     // [i] is [0, -1, 1, -2, 2, ...]
     for (int i = 0; i > -4; i = (~i>>31) - i)
@@ -223,6 +251,11 @@ public final class Pointers implements Handler.Callback
     Pointer ptr = getPtr(pointerId);
     if (ptr == null)
       return;
+    if (ptr.hasFlagsAny(FLAG_P_SLIDING))
+    {
+      ptr.sliding.onTouchMove(ptr, x);
+      return;
+    }
 
     // The position in a IME windows is clampled to view.
     // For a better up swipe behaviour, set the y position to a negative value when clamped.
@@ -230,44 +263,60 @@ public final class Pointers implements Handler.Callback
     float dx = x - ptr.downX;
     float dy = y - ptr.downY;
 
-    if (ptr.sliding)
-    {
-      onTouchMove_sliding(ptr, dx);
-      return;
-    }
-
     float dist = Math.abs(dx) + Math.abs(dy);
-    Integer direction;
     if (dist < _config.swipe_dist_px)
     {
-      direction = null;
+      // Pointer is still on the center.
+      if (ptr.gesture == null || !ptr.gesture.is_in_progress())
+        return;
+      // Gesture ended
+      ptr.gesture.moved_to_center();
+      ptr.value = apply_gesture(ptr, ptr.gesture.get_gesture());
+      ptr.flags = 0;
+
     }
     else
-    {
+    { // Pointer is on a quadrant.
       // See [getKeyAtDirection()] for the meaning. The starting point on the
       // circle is the top direction.
       double a = Math.atan2(dy, dx) + Math.PI;
       // a is between 0 and 2pi, 0 is pointing to the left
       // add 12 to align 0 to the top
-      direction = ((int)(a * 8 / Math.PI) + 12) % 16;
-    }
+      int direction = ((int)(a * 8 / Math.PI) + 12) % 16;
+      if (ptr.gesture == null)
+      { // Gesture starts
 
-    if (direction != ptr.selected_direction)
-    {
-      ptr.selected_direction = direction;
-      KeyValue newValue = getNearestKeyAtDirection(ptr, direction);
-      if (newValue != null && !newValue.equals(ptr.value))
-      {
-        ptr.value = newValue;
-        ptr.flags = newValue.getFlags();
-        // Sliding mode is entered when key5 or key6 is down on a slider key.
-        if (ptr.key.slider &&
-            (newValue.equals(ptr.key.getKeyValue(5))
-             || newValue.equals(ptr.key.getKeyValue(6))))
-        {
-          startSliding(ptr, dy);
+        ptr.gesture = new Gesture(direction);
+        KeyValue new_value = getNearestKeyAtDirection(ptr, direction);
+        if (new_value != null)
+        { // Pointer is swiping into a side key.
+
+          ptr.value = new_value;
+          ptr.flags = pointer_flags_of_kv(new_value);
+          // Sliding mode is entered when key5 or key6 is down on a slider key.
+          if (ptr.key.slider &&
+              (new_value.equals(ptr.key.getKeyValue(5))
+               || new_value.equals(ptr.key.getKeyValue(6))))
+          {
+            startSliding(ptr, x);
+          }
+          _handler.onPointerDown(new_value, true);
         }
-        _handler.onPointerDown(newValue, true);
+
+      }
+      else if (ptr.gesture.changed_direction(direction))
+      { // Gesture changed state
+        if (!ptr.gesture.is_in_progress())
+        { // Gesture ended
+          stopKeyRepeat(ptr);
+          _handler.onPointerFlagsChanged(true);
+        }
+        else
+        {
+          ptr.value = apply_gesture(ptr, ptr.gesture.get_gesture());
+          restartKeyRepeat(ptr);
+          ptr.flags = 0; // Special behaviors are ignored during a gesture.
+        }
       }
     }
   }
@@ -297,7 +346,8 @@ public final class Pointers implements Handler.Callback
     if (v == null)
       return null;
     for (Pointer p : _ptrs)
-      if (p.key == k && p.pointerId == -1 && p.value != null && p.value.equals(v))
+      if (p.key == k && p.hasFlagsAny(FLAG_P_LATCHED)
+          && p.value != null && p.value.equals(v))
         return p;
     return null;
   }
@@ -308,25 +358,25 @@ public final class Pointers implements Handler.Callback
     {
       Pointer ptr = _ptrs.get(i);
       // Latched and not locked, remove
-      if (ptr.pointerId == -1 && (ptr.flags & KeyValue.FLAG_LOCKED) == 0)
+      if (ptr.hasFlagsAny(FLAG_P_LATCHED) && (ptr.flags & FLAG_P_LOCKED) == 0)
         _ptrs.remove(i);
       // Not latched but pressed, don't latch once released and stop long press.
-      else if ((ptr.flags & KeyValue.FLAG_LATCH) != 0)
-        ptr.flags &= ~KeyValue.FLAG_LATCH;
+      else if ((ptr.flags & FLAG_P_LATCHABLE) != 0)
+        ptr.flags &= ~FLAG_P_LATCHABLE;
     }
   }
 
   /** Make a pointer into the locked state. */
   private void lockPointer(Pointer ptr, boolean shouldVibrate)
   {
-    ptr.flags = (ptr.flags & ~KeyValue.FLAG_LOCK) | KeyValue.FLAG_LOCKED;
+    ptr.flags = (ptr.flags & ~FLAG_P_LOCKABLE) | FLAG_P_LOCKED;
     _handler.onPointerFlagsChanged(shouldVibrate);
   }
 
   boolean isSliding()
   {
     for (Pointer ptr : _ptrs)
-      if (ptr.sliding)
+      if (ptr.hasFlagsAny(FLAG_P_SLIDING))
         return true;
     return false;
   }
@@ -370,28 +420,34 @@ public final class Pointers implements Handler.Callback
     }
   }
 
+  private void restartKeyRepeat(Pointer ptr)
+  {
+    stopKeyRepeat(ptr);
+    startKeyRepeat(ptr);
+  }
+
   /** A pointer is repeating. Returns [true] if repeat should continue. */
   private boolean handleKeyRepeat(Pointer ptr)
   {
     // Long press toggle lock on modifiers
-    if ((ptr.flags & KeyValue.FLAG_LATCH) != 0)
+    if ((ptr.flags & FLAG_P_LATCHABLE) != 0)
     {
-      lockPointer(ptr, true);
+      if (!ptr.hasFlagsAny(FLAG_P_CANT_LOCK))
+        lockPointer(ptr, true);
       return false;
     }
     // Stop repeating: Latched key, no key
-    if (ptr.pointerId == -1 || ptr.value == null)
+    if (ptr.hasFlagsAny(FLAG_P_LATCHED) || ptr.value == null)
       return false;
     KeyValue kv = KeyModifier.modify_long_press(ptr.value);
     if (!kv.equals(ptr.value))
     {
       ptr.value = kv;
-      ptr.flags = kv.getFlags();
       _handler.onPointerDown(kv, true);
       return true;
     }
     // Stop repeating: Special keys
-    if (kv.hasFlags(KeyValue.FLAG_SPECIAL))
+    if (kv.hasFlagsAny(KeyValue.FLAG_SPECIAL))
       return false;
     _handler.onPointerHold(kv, ptr.modifiers);
     return true;
@@ -399,35 +455,65 @@ public final class Pointers implements Handler.Callback
 
   // Sliding
 
-  void startSliding(Pointer ptr, float initial_dy)
+  void startSliding(Pointer ptr, float x)
   {
     stopKeyRepeat(ptr);
-    ptr.sliding = true;
-    ptr.sliding_count = (int)(initial_dy / _config.slide_step_px);
+    ptr.flags |= FLAG_P_SLIDING;
+    ptr.sliding = new Sliding(x);
   }
 
-  /** Handle a sliding pointer going up. Latched modifiers are not cleared to
-      allow easy adjustments to the cursors. The pointer is cancelled. */
-  void onTouchUp_sliding(Pointer ptr)
+  /** Return the [FLAG_P_*] flags that correspond to pressing [kv]. */
+  static int pointer_flags_of_kv(KeyValue kv)
   {
-    removePtr(ptr);
-    _handler.onPointerFlagsChanged(false);
+    int flags = 0;
+    if (kv.hasFlagsAny(KeyValue.FLAG_LATCH))
+    {
+      // Non-special latchable key must clear modifiers and can't be locked
+      if (!kv.hasFlagsAny(KeyValue.FLAG_SPECIAL))
+        flags |= FLAG_P_CLEAR_LATCHED | FLAG_P_CANT_LOCK;
+      flags |= FLAG_P_LATCHABLE;
+    }
+    if (kv.hasFlagsAny(KeyValue.FLAG_LOCK))
+      flags |= FLAG_P_LOCKABLE;
+    return flags;
   }
 
-  /** Handle move events for sliding pointers. [dx] is distance travelled from
-      [downX]. */
-  void onTouchMove_sliding(Pointer ptr, float dx)
+  // Gestures
+
+  /** Apply a gesture to the current key. */
+  KeyValue apply_gesture(Pointer ptr, Gesture.Name gesture)
   {
-    int count = (int)(dx / _config.slide_step_px);
-    if (count == ptr.sliding_count)
-      return;
-    int key_index = (count < ptr.sliding_count) ? 5 : 6;
-    KeyValue newValue = _handler.modifyKey(ptr.key.keys[key_index], ptr.modifiers);
-    ptr.sliding_count = count;
-    ptr.value = newValue;
-    if (newValue != null)
-      _handler.onPointerHold(newValue, ptr.modifiers);
+    switch (gesture)
+    {
+      case None:
+        return ptr.value;
+      case Swipe:
+        return ptr.value;
+      case Roundtrip:
+        return
+          modify_key_with_extra_modifier(
+              ptr,
+              getNearestKeyAtDirection(ptr, ptr.gesture.current_direction()),
+              KeyValue.Modifier.GESTURE);
+      case Circle:
+        return
+          modify_key_with_extra_modifier(ptr, ptr.key.keys[0],
+              KeyValue.Modifier.GESTURE);
+      case Anticircle:
+        return _handler.modifyKey(ptr.key.anticircle, ptr.modifiers);
+    }
+    return ptr.value; // Unreachable
   }
+
+  KeyValue modify_key_with_extra_modifier(Pointer ptr, KeyValue kv,
+      KeyValue.Modifier extra_mod)
+  {
+    return
+      _handler.modifyKey(kv,
+        ptr.modifiers.with_extra_mod(KeyValue.makeInternalModifier(extra_mod)));
+  }
+
+  // Pointers
 
   private static final class Pointer
   {
@@ -435,36 +521,123 @@ public final class Pointers implements Handler.Callback
     public int pointerId;
     /** The Key pressed by this Pointer */
     public final KeyboardData.Key key;
-    /** Current direction. [null] means not swiping. */
-    public Integer selected_direction;
+    /** Gesture state, see [Gesture]. [null] means the pointer has not moved out of the center region. */
+    public Gesture gesture;
     /** Selected value with [modifiers] applied. */
     public KeyValue value;
     public float downX;
     public float downY;
     /** Modifier flags at the time the key was pressed. */
     public Modifiers modifiers;
-    /** Flags of the value. Latch, lock and locked flags are updated. */
+    /** See [FLAG_P_*] flags. */
     public int flags;
     /** Identify timeout messages. */
     public int timeoutWhat;
-    /** Whether the pointer is "sliding" laterally on a key. */
-    public boolean sliding;
-    /** Number of event already caused by sliding. */
-    public int sliding_count;
+    /** [null] when not in sliding mode. */
+    public Sliding sliding;
 
     public Pointer(int p, KeyboardData.Key k, KeyValue v, float x, float y, Modifiers m)
     {
       pointerId = p;
       key = k;
-      selected_direction = null;
+      gesture = null;
       value = v;
       downX = x;
       downY = y;
       modifiers = m;
-      flags = (v == null) ? 0 : v.getFlags();
+      flags = (v == null) ? 0 : pointer_flags_of_kv(v);
       timeoutWhat = -1;
-      sliding = false;
-      sliding_count = 0;
+      sliding = null;
+    }
+
+    public boolean hasFlagsAny(int has)
+    {
+      return ((flags & has) != 0);
+    }
+  }
+
+  public final class Sliding
+  {
+    /** Accumulated distance since last event. */
+    float d = 0.f;
+    /** The slider speed changes depending on the pointer speed. */
+    float speed = 1.f;
+    /** Coordinate of the last move. */
+    float last_x;
+    /** [System.currentTimeMillis()] at the time of the last move. */
+    long last_move_ms;
+
+    public Sliding(float x)
+    {
+      last_x = x;
+      last_move_ms = System.currentTimeMillis();
+    }
+
+    static final float SPEED_SMOOTHING = 0.7f;
+    /** Avoid absurdly large values. */
+    static final float SPEED_MAX = 4.f;
+
+    public void onTouchMove(Pointer ptr, float x)
+    {
+      d += (x - last_x) * speed / _config.slide_step_px;
+      update_speed(x);
+      // Send an event when [abs(d)] exceeds [1].
+      int d_ = (int)d;
+      if (d_ != 0)
+      {
+        d -= d_;
+        int key_index = (d_ < 0) ? 5 : 6;
+        ptr.value = _handler.modifyKey(ptr.key.keys[key_index], ptr.modifiers);
+        send_key(ptr, Math.abs(d_));
+      }
+    }
+
+    /** Handle a sliding pointer going up. Latched modifiers are not
+        cleared to allow easy adjustments to the cursors. The pointer is
+        cancelled. */
+    public void onTouchUp(Pointer ptr)
+    {
+      removePtr(ptr);
+      _handler.onPointerFlagsChanged(false);
+    }
+
+    /** Send the pressed key [n] times. */
+    void send_key(Pointer ptr, int n)
+    {
+      if (ptr.value == null)
+        return;
+      // Avoid looping if possible to avoid lag while sliding fast
+      KeyValue multiplied = multiply_key(ptr.value, n);
+      if (multiplied != null)
+        _handler.onPointerHold(multiplied, ptr.modifiers);
+      else
+        for (int i = 0; i < n; i++)
+          _handler.onPointerHold(ptr.value, ptr.modifiers);
+    }
+
+    /** Return a key performing the same action as [kv] but [n] times. Returns
+        [null] if [kv] cannot be multiplied. */
+    KeyValue multiply_key(KeyValue kv, int n)
+    {
+      switch (kv.getKind())
+      {
+        case Cursor_move:
+          return KeyValue.cursorMoveKey(kv.getCursorMove() * n);
+      }
+      return null;
+    }
+
+    /** [speed] is computed from the elapsed time and distance traveled
+        between two move events. Exponential smoothing is used to smooth out
+        the noise. Sets [last_move_ms] and [last_x]. */
+    void update_speed(float x)
+    {
+      long now = System.currentTimeMillis();
+      float instant_speed = Math.min(SPEED_MAX,
+          Math.abs(x - last_x) / (float)(now - last_move_ms) + 1.f);
+      speed = speed + (instant_speed - speed) * SPEED_SMOOTHING;
+      last_move_ms = now;
+      last_x = x;
     }
   }
 
@@ -472,23 +645,41 @@ public final class Pointers implements Handler.Callback
       Sorted in the order they should be evaluated. */
   public static final class Modifiers
   {
-    private final KeyValue.Modifier[] _mods;
+    private final KeyValue[] _mods;
     private final int _size;
 
-    private Modifiers(KeyValue.Modifier[] m, int s)
+    private Modifiers(KeyValue[] m, int s)
     {
       _mods = m; _size = s;
     }
 
-    public KeyValue.Modifier get(int i) { return _mods[_size - 1 - i]; }
+    public KeyValue get(int i) { return _mods[_size - 1 - i]; }
     public int size() { return _size; }
     public boolean has(KeyValue.Modifier m)
     {
-      return (Arrays.binarySearch(_mods, 0, _size, m) >= 0);
+      for (int i = 0; i < _size; i++)
+      {
+        KeyValue kv = _mods[i];
+        switch (kv.getKind())
+        {
+          case Modifier:
+            if (kv.getModifier().equals(m))
+              return true;
+        }
+      }
+      return false;
+    }
+
+    /** Return a copy of this object with an extra modifier added. */
+    public Modifiers with_extra_mod(KeyValue m)
+    {
+      KeyValue[] newmods = Arrays.copyOf(_mods, _size + 1);
+      newmods[_size] = m;
+      return ofArray(newmods, newmods.length);
     }
 
     /** Returns the activated modifiers that are not in [m2]. */
-    public Iterator<KeyValue.Modifier> diff(Modifiers m2)
+    public Iterator<KeyValue> diff(Modifiers m2)
     {
       return new ModifiersDiffIterator(this, m2);
     }
@@ -502,9 +693,9 @@ public final class Pointers implements Handler.Callback
     }
 
     public static final Modifiers EMPTY =
-      new Modifiers(new KeyValue.Modifier[0], 0);
+      new Modifiers(new KeyValue[0], 0);
 
-    protected static Modifiers ofArray(KeyValue.Modifier[] mods, int size)
+    protected static Modifiers ofArray(KeyValue[] mods, int size)
     {
       // Sort and remove duplicates and nulls.
       if (size > 1)
@@ -513,7 +704,7 @@ public final class Pointers implements Handler.Callback
         int j = 0;
         for (int i = 0; i < size; i++)
         {
-          KeyValue.Modifier m = mods[i];
+          KeyValue m = mods[i];
           if (m != null && (i + 1 >= size || m != mods[i + 1]))
           {
             mods[j] = m;
@@ -527,7 +718,7 @@ public final class Pointers implements Handler.Callback
 
     /** Returns modifiers that are in [m1_] but not in [m2_]. */
     static final class ModifiersDiffIterator
-        implements Iterator<KeyValue.Modifier>
+        implements Iterator<KeyValue>
     {
       Modifiers m1;
       int i1 = 0;
@@ -546,11 +737,11 @@ public final class Pointers implements Handler.Callback
         return i1 < m1._size;
       }
 
-      public KeyValue.Modifier next()
+      public KeyValue next()
       {
         if (i1 >= m1._size)
           throw new NoSuchElementException();
-        KeyValue.Modifier m = m1._mods[i1];
+        KeyValue m = m1._mods[i1];
         i1++;
         advance();
         return m;
@@ -562,7 +753,7 @@ public final class Pointers implements Handler.Callback
       {
         while (i1 < m1.size())
         {
-          KeyValue.Modifier m = m1._mods[i1];
+          KeyValue m = m1._mods[i1];
           while (true)
           {
             if (i2 >= m2._size)
@@ -583,7 +774,7 @@ public final class Pointers implements Handler.Callback
   public interface IPointerEventHandler
   {
     /** Key can be modified or removed by returning [null]. */
-    public KeyValue modifyKey(KeyValue k, Modifiers flags);
+    public KeyValue modifyKey(KeyValue k, Modifiers mods);
 
     /** A key is pressed. [getModifiers()] is uptodate. Might be called after a
         press or a swipe to a different value. Down events are not paired with
@@ -592,12 +783,12 @@ public final class Pointers implements Handler.Callback
 
     /** Key is released. [k] is the key that was returned by
         [modifySelectedKey] or [modifySelectedKey]. */
-    public void onPointerUp(KeyValue k, Modifiers flags);
+    public void onPointerUp(KeyValue k, Modifiers mods);
 
     /** Flags changed because latched or locked keys or cancelled pointers. */
     public void onPointerFlagsChanged(boolean shouldVibrate);
 
     /** Key is repeating. */
-    public void onPointerHold(KeyValue k, Modifiers flags);
+    public void onPointerHold(KeyValue k, Modifiers mods);
   }
 }

@@ -35,8 +35,6 @@ Tagad lieliski piemērota izmantošanai ikdienā.
   <string name="pref_extra_keys_title">Pievienot tastatūrai taustiņus</string>
   <string name="pref_extra_keys_custom">Pievienot pielāgotus taustiņus</string>
   <string name="pref_extra_keys_internal">Atlasīt taustiņus, ko pievienot tastatūrai</string>
-  <string name="pref_second_layout_title">Otrējais izkārtojums</string>
-  <string name="pref_second_layout_none">Neviens</string>
   <string name="pref_category_typing">Rakstīšana</string>
   <string name="pref_swipe_dist_title">Pavilkšanas attālums</string>
   <string name="pref_swipe_dist_summary">Taustiņu stūros esošo rakstzīmju attālums (%s)</string>
@@ -49,8 +47,8 @@ Tagad lieliski piemērota izmantošanai ikdienā.
   <string name="pref_autocapitalisation_summary">Piespiest Shift teikuma sākumā</string>
   <string name="pref_switch_input_immediate_title">Pārslēgties uz pēdējo izmantoto tastatūru</string>
   <string name="pref_switch_input_immediate_summary">Tastatūras pārslēgšanas taustiņa uzvedība</string>
-  <!-- <string name="pref_vibrate_custom">Custom vibration</string> -->
-  <!-- <string name="pref_vibrate_duration_title">Vibration intensity</string> -->
+  <string name="pref_vibrate_custom">Pielāgota trīcēšana</string>
+  <string name="pref_vibrate_duration_title">Trīcēšanas stiprums</string>
   <string name="pref_pin_entry_enabled_title">Piespraust ievadīšanas izkārtojumu</string>
   <string name="pref_pin_entry_enabled_summary">Kad ievada skaitļus, datumus un tālruņa numurus</string>
   <string name="pref_category_style">Izskata pielāgojumi</string>
@@ -76,6 +74,14 @@ Tagad lieliski piemērota izmantošanai ikdienā.
   <string name="pref_swipe_dist_e_very_far">Ļoti tāls</string>
   <string name="pref_key_horizontal_space">Līmeniskais attālums starp taustiņiem</string>
   <string name="pref_key_vertical_space">Stateniskais attālums starp taustiņiem</string>
+  <string name="pref_border_config_title">Pielāgot apmales</string>
+  <string name="pref_border_width_title">Apmales platums</string>
+  <string name="pref_corners_radius_title">Stūru rādiuss</string>
+  <!-- <string name="pref_circle_sensitivity_title">Circle gesture sensitivity</string> -->
+  <!-- <string name="pref_circle_sensitivity_e_high">High</string> -->
+  <!-- <string name="pref_circle_sensitivity_e_medium">Medium</string> -->
+  <!-- <string name="pref_circle_sensitivity_e_low">Low</string> -->
+  <!-- <string name="pref_circle_sensitivity_e_disabled">Disabled</string> -->
   <string name="key_action_next">Nākamais</string>
   <string name="key_action_done">Darīts</string>
   <string name="key_action_go">Aiziet</string>
@@ -89,9 +95,11 @@ Tagad lieliski piemērota izmantošanai ikdienā.
   <string name="launcher_sourcecode">Šī ir bezmaksas un atvērtā pirmkoda lietotne.
     GitHub var atrast pirmkodu un ziņot par nepilnībām.</string>
   <string name="launcher_tryhere">Pēc iespējošanas šeit var izmēģināt tastatūru:</string>
+  <string name="launcher_tryhere_hint">Izmēģināt šeit</string>
   <string name="key_descr_capslock">Burtslēgs</string>
+  <string name="key_descr_compose">Izveidot</string>
   <string name="key_descr_switch_greekmath">Grieķu un matemātikas rakstzīmes</string>
-  <!-- <string name="key_descr_change_method">Switch keyboard</string> -->
+  <string name="key_descr_change_method">Pārslēgt tastatūru</string>
   <string name="key_descr_voice_typing">Rakstīšana ar balsi</string>
   <string name="key_descr_copy">Ievietot starpliktuvē</string>
   <string name="key_descr_paste">Ielīmēt</string>
@@ -109,5 +117,4 @@ Tagad lieliski piemērota izmantošanai ikdienā.
   <string name="key_descr_page_down">Lejupšķirt</string>
   <string name="key_descr_home">Sākums</string>
   <string name="key_descr_end">Beigas</string>
-  <string name="pref_category_advanced">Papildu</string>
 </resources>

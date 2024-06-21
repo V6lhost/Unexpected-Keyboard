@@ -35,8 +35,6 @@ Cette application ne contient pas de publicité, n'accède pas au réseau et est
   <string name="pref_extra_keys_title">Ajouter des touches au clavier</string>
   <string name="pref_extra_keys_custom">Ajouter des touches personnalisées</string>
   <string name="pref_extra_keys_internal">Sélectionner les touches à ajouter au clavier</string>
-  <string name="pref_second_layout_title">Disposition secondaire</string>
-  <string name="pref_second_layout_none">Aucune</string>
   <string name="pref_category_typing">Saisie</string>
   <string name="pref_swipe_dist_title">Distance de swipe</string>
   <string name="pref_swipe_dist_summary">La distance des caractères dans les coins (%s)</string>
@@ -76,6 +74,14 @@ Cette application ne contient pas de publicité, n'accède pas au réseau et est
   <string name="pref_swipe_dist_e_very_far">Très longue</string>
   <string name="pref_key_horizontal_space">Espacement horizontal entre les touches</string>
   <string name="pref_key_vertical_space">Espacement vertical entre les touches</string>
+  <!-- <string name="pref_border_config_title">Customize borders</string> -->
+  <!-- <string name="pref_border_width_title">Border Width</string> -->
+  <!-- <string name="pref_corners_radius_title">Corner radius</string> -->
+  <!-- <string name="pref_circle_sensitivity_title">Circle gesture sensitivity</string> -->
+  <!-- <string name="pref_circle_sensitivity_e_high">High</string> -->
+  <!-- <string name="pref_circle_sensitivity_e_medium">Medium</string> -->
+  <!-- <string name="pref_circle_sensitivity_e_low">Low</string> -->
+  <!-- <string name="pref_circle_sensitivity_e_disabled">Disabled</string> -->
   <string name="key_action_next">Suiv.</string>
   <string name="key_action_done">Fin</string>
   <string name="key_action_go">Aller</string>
@@ -87,7 +93,9 @@ Cette application ne contient pas de publicité, n'accède pas au réseau et est
   <string name="launcher_description">Cette application est un clavier virtuel. Activez-le dans les paramètres système en cliquant sur le bouton ci-dessous.</string>
   <string name="launcher_sourcecode">Cette application est libre et open-source. Lisez le source code et reportez des problèmes sur Github.</string>
   <string name="launcher_tryhere">Après l\'avoir activé, vous pouvez l\'essayer ici:</string>
+  <!-- <string name="launcher_tryhere_hint">Try here</string> -->
   <string name="key_descr_capslock">Verrouillage majuscules</string>
+  <!-- <string name="key_descr_compose">Compose</string> -->
   <string name="key_descr_switch_greekmath">Symboles mathématiques</string>
   <!-- <string name="key_descr_change_method">Switch keyboard</string> -->
   <string name="key_descr_voice_typing">Saisie vocale</string>
@@ -107,5 +115,4 @@ Cette application ne contient pas de publicité, n'accède pas au réseau et est
   <string name="key_descr_page_down">Page suivante</string>
   <string name="key_descr_home">Début</string>
   <string name="key_descr_end">Fin</string>
-  <string name="pref_category_advanced">Avancé</string>
 </resources>

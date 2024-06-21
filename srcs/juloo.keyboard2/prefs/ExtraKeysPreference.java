@@ -22,6 +22,7 @@ public class ExtraKeysPreference extends PreferenceCategory
   {
     "alt",
     "meta",
+    "compose",
     "voice_typing",
     "accent_aigu",
     "accent_grave",
@@ -48,6 +49,8 @@ public class ExtraKeysPreference extends PreferenceCategory
     "†",
     "ª",
     "º",
+    "tab",
+    "esc",
     "page_up",
     "page_down",
     "home",
@@ -65,6 +68,8 @@ public class ExtraKeysPreference extends PreferenceCategory
     "redo",
     "superscript",
     "subscript",
+    "f11_placeholder",
+    "f12_placeholder",
   };
 
   /** Whether an extra key is enabled by default. */
@@ -74,6 +79,11 @@ public class ExtraKeysPreference extends PreferenceCategory
     {
       case "voice_typing":
       case "change_method":
+      case "compose":
+      case "tab":
+      case "esc":
+      case "f11_placeholder":
+      case "f12_placeholder":
         return true;
       default:
         return false;
@@ -87,29 +97,64 @@ public class ExtraKeysPreference extends PreferenceCategory
     switch (name)
     {
       case "capslock": id = R.string.key_descr_capslock; break;
-      case "switch_greekmath": id = R.string.key_descr_switch_greekmath; break;
       case "change_method": id = R.string.key_descr_change_method; break;
-      case "voice_typing": id = R.string.key_descr_voice_typing; break;
+      case "compose": id = R.string.key_descr_compose; break;
       case "copy": id = R.string.key_descr_copy; break;
-      case "paste": id = R.string.key_descr_paste; break;
       case "cut": id = R.string.key_descr_cut; break;
+      case "end": id = R.string.key_descr_end; break;
+      case "home": id = R.string.key_descr_home; break;
+      case "page_down": id = R.string.key_descr_page_down; break;
+      case "page_up": id = R.string.key_descr_page_up; break;
+      case "paste": id = R.string.key_descr_paste; break;
+      case "pasteAsPlainText": id = R.string.key_descr_pasteAsPlainText; break;
+      case "redo": id = R.string.key_descr_redo; break;
       case "selectAll": id = R.string.key_descr_selectAll; break;
       case "shareText": id = R.string.key_descr_shareText; break;
-      case "pasteAsPlainText": id = R.string.key_descr_pasteAsPlainText; break;
+      case "subscript": id = R.string.key_descr_subscript; break;
+      case "superscript": id = R.string.key_descr_superscript; break;
+      case "switch_greekmath": id = R.string.key_descr_switch_greekmath; break;
       case "undo": id = R.string.key_descr_undo; break;
-      case "redo": id = R.string.key_descr_redo; break;
+      case "voice_typing": id = R.string.key_descr_voice_typing; break;
       case "ª": id = R.string.key_descr_ª; break;
       case "º": id = R.string.key_descr_º; break;
-      case "superscript": id = R.string.key_descr_superscript; break;
-      case "subscript": id = R.string.key_descr_subscript; break;
-      case "page_up": id = R.string.key_descr_page_up; break;
-      case "page_down": id = R.string.key_descr_page_down; break;
-      case "home": id = R.string.key_descr_home; break;
-      case "end": id = R.string.key_descr_end; break;
     }
     if (id == 0)
       return null;
     return res.getString(id);
+  }
+
+  static String key_title(String key_name, KeyValue kv)
+  {
+    switch (key_name)
+    {
+      case "f11_placeholder": return "F11";
+      case "f12_placeholder": return "F12";
+    }
+    return kv.getString();
+  }
+
+  static KeyboardData.PreferredPos key_preferred_pos(String key_name)
+  {
+    switch (key_name)
+    {
+      case "f11_placeholder":
+        return new KeyboardData.PreferredPos(KeyValue.getKeyByName("9"),
+            new KeyboardData.KeyPos[]{
+              new KeyboardData.KeyPos(0, 8, 3),
+              new KeyboardData.KeyPos(0, 8, 4),
+              new KeyboardData.KeyPos(0, -1, 3),
+              new KeyboardData.KeyPos(0, -1, 4),
+            });
+      case "f12_placeholder":
+        return new KeyboardData.PreferredPos(KeyValue.getKeyByName("0"),
+            new KeyboardData.KeyPos[]{
+              new KeyboardData.KeyPos(0, 9, 3),
+              new KeyboardData.KeyPos(0, 9, 4),
+              new KeyboardData.KeyPos(0, -1, 3),
+              new KeyboardData.KeyPos(0, -1, 4),
+            });
+    }
+    return KeyboardData.PreferredPos.DEFAULT;
   }
 
   /** Get the set of enabled extra keys. */
@@ -121,7 +166,7 @@ public class ExtraKeysPreference extends PreferenceCategory
     {
       if (prefs.getBoolean(pref_key_of_key_name(key_name),
             default_checked(key_name)))
-        ks.put(KeyValue.getKeyByName(key_name), KeyboardData.PreferredPos.DEFAULT);
+        ks.put(KeyValue.getKeyByName(key_name), key_preferred_pos(key_name));
     }
     return ks;
   }
@@ -159,14 +204,14 @@ public class ExtraKeysPreference extends PreferenceCategory
     {
       super(ctx);
       KeyValue kv = KeyValue.getKeyByName(key_name);
-      String title = kv.getString();
+      String title = key_title(key_name, kv);
       String descr = key_description(ctx.getResources(), key_name);
       if (descr != null)
         title += " (" + descr + ")";
       setKey(pref_key_of_key_name(key_name));
       setDefaultValue(default_checked);
       setTitle(title);
-      _key_font = kv.hasFlags(KeyValue.FLAG_KEY_FONT);
+      _key_font = kv.hasFlagsAny(KeyValue.FLAG_KEY_FONT);
     }
 
     @Override
